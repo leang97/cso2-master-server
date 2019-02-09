@@ -29,7 +29,7 @@ export class ChannelManager {
     private channelServers: ChannelServer[]
     private users: User[];
     constructor() {
-        this.channelServers = [new ChannelServer('QQ qun:821591886', 1, 1, 1)]
+        this.channelServers = [new ChannelServer('Test Server', 1, 1, 1)]
         this.users = []
     }
 
