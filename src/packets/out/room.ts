@@ -75,7 +75,7 @@ export class OutRoomPacket extends OutPacketBase {
 
         return this.getData()
     }
-
+    // problematc area
     public setUserReadyStatus(user: User, readyStatus: RoomReadyStatus): Buffer {
         this.outStream = new WritableStreamBuffer(
             { initialSize: 20, incrementAmount: 15 })
@@ -129,11 +129,13 @@ export class OutRoomPacket extends OutPacketBase {
             { initialSize: 20, incrementAmount: 15 })
 
         this.buildHeader()
-        this.writeUInt8(OutRoomPacketType.Countdown)
-
-        new OutRoomCountdown(true, countdown).build(this)
-
-        return this.getData()
+        try {
+            this.writeUInt8(OutRoomPacketType.Countdown)
+            new OutRoomCountdown(true, countdown).build(this)
+            return this.getData()
+        } catch (e) {
+            console.warn(e)
+        }
     }
 
     public stopCountdown(): Buffer {

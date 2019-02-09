@@ -27,9 +27,10 @@ import { OutServerListPacket } from 'packets/out/serverlist'
  */
 export class ChannelManager {
     private channelServers: ChannelServer[]
-
+    private users: User[];
     constructor() {
-        this.channelServers = [new ChannelServer('Test server', 1, 1, 1)]
+        this.channelServers = [new ChannelServer('QQ qun:821591886', 1, 1, 1)]
+        this.users = []
     }
 
     /**
@@ -44,6 +45,9 @@ export class ChannelManager {
             console.warn('uuid "%s" tried to get channels without session', sourceSocket.uuid)
             return false
         }
+
+        console.log('Removing User %s', user.userName)
+        this.users.splice(this.users.indexOf(user), 1) // removing user from list when request channel list
 
         console.log('user "%s" requested server list, sending...', user.userName)
         this.sendChannelListTo(user)
@@ -129,6 +133,7 @@ export class ChannelManager {
         }
 
         console.log('user "%s" requested room list successfully, sending it...', user.userName)
+        this.users.push(user) // push into a list of channel waiting players
         this.setUserChannel(user, channel, server)
 
         return true
@@ -149,6 +154,12 @@ export class ChannelManager {
         const roomListReply: Buffer = new OutRoomListPacket(user.socket).getFullList(channel.rooms)
         user.socket.send(lobbyReply)
         user.socket.send(roomListReply)
+    }
+
+    public recurseChannelUsers(fn: (user: User) => void): void {
+        for (const user of this.users) {
+            fn(user)
+        }
     }
 
     /**
@@ -225,6 +236,14 @@ export class ChannelManager {
         newRoom.sendJoinNewRoom(user)
         newRoom.sendRoomSettingsTo(user)
 
+/****Need to remove joined player from array list and then send list to  */
+        this.users.splice(this.users.indexOf(user), 1)
+
+        this.recurseChannelUsers((u: User): void => {
+            this.sendRoomListTo(u, this.getChannel(u.currentChannelIndex, u.currentChannelServerIndex))
+        })
+/******************* */
+
         console.log('user "%s" created a new room. name: "%s" (id: %i)',
             user.userName, newRoom.settings.roomName, newRoom.id)
 
@@ -280,6 +299,14 @@ export class ChannelManager {
             }
         })
 
+/****Need to remove joined player from array list and then send list to Channel waiting players */
+        this.users.splice(this.users.indexOf(user), 1)
+
+        this.recurseChannelUsers((u: User): void => {
+            this.sendRoomListTo(u, this.getChannel(u.currentChannelIndex, u.currentChannelServerIndex))
+        })
+/******************* */
+
         console.log('user "%s" joined a new room. room name: "%s" room id: %i',
                     user.userName, desiredRoom.settings.roomName, desiredRoom.id)
 
@@ -307,9 +334,14 @@ export class ChannelManager {
         currentRoom.removeUser(user)
         user.currentRoom = null
 
+        this.recurseChannelUsers((u: User): void => {
+            this.sendRoomListTo(u, this.getChannel(u.currentChannelIndex, u.currentChannelServerIndex))
+        })
+
         console.log('user "%s" left a room. room name: "%s" room id: %i',
             user.userName, currentRoom.settings.roomName, currentRoom.id)
-
+            /************************* Adding user back to channel waiting list and then updating its list */
+        this.users.push(user);
         this.sendRoomListTo(user,
             this.getChannel(user.currentChannelIndex, user.currentChannelServerIndex))
 
@@ -375,6 +407,11 @@ export class ChannelManager {
             return true
         } else if (currentRoom.getStatus() === RoomStatus.Ingame) {
             this.handleUserGameStart(user, currentRoom)
+            /****Send game start status */
+            this.recurseChannelUsers((u: User): void => {
+                this.sendRoomListTo(u, this.getChannel(u.currentChannelIndex, u.currentChannelServerIndex))
+            })
+            /******************* */
             return true
         }
 
@@ -399,7 +436,6 @@ export class ChannelManager {
         })
 
         room.sendStartMatchTo(host)
-
         console.log('host "%s" started room "%s"\'s (id: %i) match on map %i and gamemode %i',
             host.userName, room.settings.roomName, room.id,
             room.settings.mapId, room.settings.gameModeId)
@@ -429,7 +465,7 @@ export class ChannelManager {
             console.warn('user "%s" tried to update a room\'s settings, although it isn\'t in any', user.userName)
             return false
         }
-
+        // problematic area
         if (user !== currentRoom.host) {
             console.warn('user "%s" tried to update a room\'s settings, although it isn\'t the host.'
                 + 'room name "%s" room id: %i',

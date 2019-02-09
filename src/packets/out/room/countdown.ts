@@ -20,6 +20,10 @@ export class OutRoomCountdown {
     public build(outPacket: OutPacketBase): void {
         outPacket.writeUInt8(this.type)
 
+        if (this.count > 6 || this.count < 0) {
+            this.count = 0
+        }
+
         if (this.type === RoomCountdownType.InProgress) {
             outPacket.writeUInt8(this.count)
         }

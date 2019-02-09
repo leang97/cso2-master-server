@@ -259,7 +259,15 @@ export class Room {
             console.warn('getUserTeam: user not found!')
             return RoomTeamNum.Unknown
         }
-        return this.usersInfo.get(user).team
+        try {return this.usersInfo.get(user).team} catch (e) {
+            console.warn('There is a problem with getUserTeam')
+            console.warn(e)
+            // When a room had error, remove everyone and kill room
+            this.removeUser(user)
+            this.users.length = 0
+            this.emptyRoomCallback(this, this.parentChannel)
+            return RoomTeamNum.Unknown
+        }
     }
 
     /**
@@ -335,7 +343,20 @@ export class Room {
             console.warn('getUserReady: user not found!')
             return RoomReadyStatus.No
         }
-        return this.usersInfo.get(user).ready
+        try {
+            return this.usersInfo.get(user).ready
+        } catch (e) {
+            /** When encounter room error, remove everyone and kill room */
+            this.recurseUsers((u: User): void => {
+                this.removeUser(u)
+                u.currentRoom = null
+            })
+            this.users.length = 0
+            this.emptyRoomCallback(this, this.parentChannel)
+            console.warn('There is a problem with getUserReadyStatus')
+            console.warn(e)
+            return RoomReadyStatus.No
+        }
     }
 
     /**
