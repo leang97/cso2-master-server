@@ -29,7 +29,7 @@ export class ChannelManager {
     private channelServers: ChannelServer[]
     private users: User[];
     constructor() {
-        this.channelServers = [new ChannelServer('Test Server', 1, 1, 1)]
+        this.channelServers = [new ChannelServer('QQ qun:821591886', 1, 1, 1)]
         this.users = []
     }
 
@@ -485,7 +485,7 @@ export class ChannelManager {
 
         // inform every user in the room of the changes
         currentRoom.recurseUsers((u: User): void => {
-            currentRoom.sendUpdateRoomSettingsTo(u, newSettings)
+            currentRoom.sendUpdateRoomSettingsTo(u, NewRoomSettings.fromRoom(currentRoom))
         })
 
         console.log('host "%s" updated room "%s"\'s settings (id: %i)',

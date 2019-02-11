@@ -259,7 +259,14 @@ export class Room {
             console.warn('getUserTeam: user not found!')
             return RoomTeamNum.Unknown
         }
-        try {return this.usersInfo.get(user).team} catch (e) {
+        try {
+            const info: RoomUser = this.usersInfo.get(user)
+            if (info == null) {
+                console.warn('getUserTeam: user "%s" room info not found!', user.userName)
+                return RoomTeamNum.Unknown
+            }
+            return info.team
+        } catch (e) {
             console.warn('There is a problem with getUserTeam')
             console.warn(e)
             // When a room had error, remove everyone and kill room
